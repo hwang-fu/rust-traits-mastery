@@ -1,0 +1,8 @@
+[package]
+name = "p06_deref_magic"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]

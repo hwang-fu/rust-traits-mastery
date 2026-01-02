@@ -1,0 +1,8 @@
+[package]
+name = "p01_derive_basics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]

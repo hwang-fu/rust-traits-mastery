@@ -1,0 +1,35 @@
+[workspace]
+resolver = "2"
+
+members = [
+    "crates/p01_derive_basics",
+    "crates/p02_comparison_traits",
+    "crates/p03_conversion_from_into",
+    "crates/p04_conversion_try",
+    "crates/p05_conversion_asref",
+    "crates/p06_deref_magic",
+    "crates/p07_drop_destructor",
+    "crates/p08_borrow_toowned",
+    "crates/p09_iterator_core",
+    "crates/p10_iterator_collect",
+    "crates/p11_iterator_advanced",
+    "crates/p12_closure_fn",
+    "crates/p13_closure_fnmut_fnonce",
+    "crates/p14_operator_arithmetic",
+    "crates/p15_operator_index",
+    "crates/p16_operator_bitwise",
+    "crates/p17_display_debug",
+    "crates/p18_error_handling",
+    "crates/p19_io_read_write",
+    "crates/p20_io_bufread_seek",
+    "crates/p21_send_sync",
+    "crates/p22_sized_any",
+    "crates/p23_extend_sum",
+    "crates/p24_capstone",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Junzhe Wang <junzhe.hwangfu@gmail.com>"]
+license = "MIT"
