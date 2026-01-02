@@ -1,0 +1,22 @@
+# Rust build artifacts
+/target/
+
+# Cargo.lock is often committed for binaries, but for library workspaces
+# it's optional. We'll keep it for reproducible builds.
+# Uncomment below if you prefer not to track it:
+# Cargo.lock
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
