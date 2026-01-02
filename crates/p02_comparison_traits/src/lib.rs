@@ -1,3 +1,5 @@
+use std::hash::{Hash, Hasher};
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Point {
     pub x: i32,
@@ -89,8 +91,56 @@ impl Ord for Score {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct CacheKey {
+    pub namespace: String,
+    pub id: u64,
+}
+
+impl CacheKey {
+    pub fn new(ns: &str, id: u64) -> Self {
+        let namespace = String::from(ns);
+        CacheKey { namespace, id }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Session {
+    pub id: String,
+    pub user_agent: String, // Ignored in equality and hash
+    pub created_at: u64,    // Ignored in equality and hash
+}
+
+impl Session {
+    pub fn new(id: &str, user_agent: &str, created_at: u64) -> Self {
+        let id = String::from(id);
+        let user_agent = String::from(user_agent);
+        Session {
+            id,
+            user_agent,
+            created_at,
+        }
+    }
+}
+
+impl PartialEq for Session {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Session {}
+
+impl Hash for Session {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.id.hash(state); // Only hash id - MUST match eq()'s implementation!
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
 
     #[test]
@@ -169,5 +219,33 @@ mod tests {
         assert_eq!(scores[0].0, 30);
         assert_eq!(scores[1].0, 60);
         assert_eq!(scores[2].0, 90);
+    }
+
+    #[test]
+    fn test_hash_derive() {
+        let mut cache: HashMap<CacheKey, String> = HashMap::new();
+
+        let key1 = CacheKey::new("users", 42);
+        cache.insert(key1.clone(), String::from("Alice"));
+
+        // Same key retrieves the value
+        let key2 = CacheKey::new("users", 42);
+        assert_eq!(cache.get(&key2), Some(&String::from("Alice")));
+
+        // Different key returns None
+        let key3 = CacheKey::new("users", 99);
+        assert_eq!(cache.get(&key3), None);
+    }
+
+    #[test]
+    fn test_hash_manual() {
+        let mut sessions: HashMap<Session, String> = HashMap::new();
+
+        let s1 = Session::new("abc123", "Firefox", 1000);
+        sessions.insert(s1.clone(), String::from("logged_in"));
+
+        // Same id, different metadata - still finds it!
+        let s2 = Session::new("abc123", "Chrome", 2000);
+        assert_eq!(sessions.get(&s2), Some(&String::from("logged_in")));
     }
 }
