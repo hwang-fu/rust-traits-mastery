@@ -1,0 +1,8 @@
+[package]
+name = "p16_operator_bitwise"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]

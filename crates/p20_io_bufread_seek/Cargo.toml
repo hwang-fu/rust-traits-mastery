@@ -1,0 +1,8 @@
+[package]
+name = "p20_io_bufread_seek"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
