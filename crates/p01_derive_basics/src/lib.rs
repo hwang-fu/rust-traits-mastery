@@ -1,4 +1,4 @@
-use std::cell::Cell;
+use std::{cell::Cell, fmt};
 
 pub struct Book {
     pub title: String,
@@ -104,6 +104,49 @@ impl Clone for TrackedDocument {
     }
 }
 
+#[derive(Debug)]
+pub struct ServerConfig {
+    pub host: String,
+    pub port: u16,
+    pub max_conn: u32,
+}
+
+impl ServerConfig {
+    pub fn new(host: &str, port: u16, max_conn: u32) -> Self {
+        let host = String::from(host);
+        ServerConfig {
+            host,
+            port,
+            max_conn,
+        }
+    }
+}
+
+/// A struct with manual Debug implementation.
+/// We'll hide the password field in debug output!
+pub struct UserCredentials {
+    pub username: String,
+    pub password: String, // Sensitive - DONOT show in debug!
+}
+
+impl UserCredentials {
+    pub fn new(username: &str, password: &str) -> Self {
+        UserCredentials {
+            username: String::from(username),
+            password: String::from(password),
+        }
+    }
+}
+
+impl fmt::Debug for UserCredentials {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("UserCredentials")
+            .field("username", &self.username)
+            .field("password", &"[SECRET]")
+            .finish()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,5 +240,36 @@ mod tests {
         let doc4 = doc1.clone();
         assert_eq!(doc4.times_cloned(), 0);
         assert_eq!(doc1.times_cloned(), 3);
+    }
+
+    #[test]
+    fn test_debug_device() {
+        let conf = ServerConfig::new("localhost", 8080, 1000);
+
+        // {:?} gives compact debug output
+        let debug_str = format!("{:?}", conf);
+        assert!(debug_str.contains("localhost"));
+        assert!(debug_str.contains("8080"));
+
+        // {:#?} gives pretty-printed output (useful for nested structs)
+        let pretty_debug_str = format!("{:#?}", conf);
+        assert!(pretty_debug_str.contains("ServerConfig"));
+    }
+
+    #[test]
+    fn test_debug_manual() {
+        let creds = UserCredentials::new("admin", "admin123");
+
+        let debug_str = format!("{:?}", creds);
+
+        // Username should be visible
+        assert!(debug_str.contains("admin"));
+
+        // Password should be hidden!
+        assert!(!debug_str.contains("admin123"));
+        assert!(debug_str.contains("[SECRET]"));
+
+        println!("{:?}", creds);
+        println!("{:#?}", creds);
     }
 }
