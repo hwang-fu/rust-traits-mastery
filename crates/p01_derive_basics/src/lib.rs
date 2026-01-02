@@ -147,6 +147,35 @@ impl fmt::Debug for UserCredentials {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct AppSettings {
+    pub debug_mode: bool, // Default: false
+    pub log_level: u8,    // Default: 0
+    pub app_name: String, // Default: "" (empty string)
+}
+
+pub struct DatabaseConf {
+    pub host: String,
+    pub port: u16,
+    pub pool_size: u32,
+    pub timeout_seconds: u64,
+}
+
+impl Default for DatabaseConf {
+    fn default() -> Self {
+        let host = String::from("localhost");
+        let port = 5432;
+        let pool_size = 10;
+        let timeout_seconds = 30;
+        DatabaseConf {
+            host,
+            port,
+            pool_size,
+            timeout_seconds,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -271,5 +300,39 @@ mod tests {
 
         println!("{:?}", creds);
         println!("{:#?}", creds);
+    }
+
+    #[test]
+    fn test_default_derive() {
+        let settings = AppSettings::default();
+
+        assert!(!settings.debug_mode);
+        assert_eq!(settings.log_level, 0);
+        assert_eq!(settings.app_name, "");
+    }
+
+    #[test]
+    fn test_default_manual() {
+        let db_conf = DatabaseConf::default();
+
+        assert_eq!(db_conf.host, "localhost");
+        assert_eq!(db_conf.port, 5432);
+        assert_eq!(db_conf.pool_size, 10);
+        assert_eq!(db_conf.timeout_seconds, 30);
+    }
+
+    #[test]
+    fn test_default_struct_update() {
+        // Only override the fields we care about, rest from Default
+        let custom_db = DatabaseConf {
+            host: String::from("production.db.example.com"),
+            port: 5433,
+            ..Default::default() // pool_size=10, timeout_seconds=30
+        };
+
+        assert_eq!(custom_db.host, "production.db.example.com");
+        assert_eq!(custom_db.port, 5433);
+        assert_eq!(custom_db.pool_size, 10); // from Default
+        assert_eq!(custom_db.timeout_seconds, 30); // from Default
     }
 }
