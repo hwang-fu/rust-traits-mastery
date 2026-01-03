@@ -79,6 +79,81 @@ impl BorrowMut<[u8]> for Buffer {
 
 // ------------------------------
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct UserId(String); // e.g., "12345"
+
+impl UserId {
+    pub fn new(id: &str) -> Self {
+        UserId(id.into())
+    }
+
+    pub fn display(&self) -> String {
+        format!("USER-{}", self.0)
+    }
+}
+
+impl AsRef<str> for UserId {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+// WRONG to implement Borrow<str>!
+/*
+    impl Borrow<str> for UserId {
+        fn borrow(&self) -> &str {
+            &self.0
+        }
+    }
+*/
+// Why wrong? Because:
+//   UserId::new("123").hash() != "123".hash()
+//
+// UserId hashes the STRUCT (derived Hash), while str hashes just the string.
+// HashMap lookups would FAIL silently!
+
+// ------------------------------
+
+/// A string wrapper where Borrow<str> IS correct.
+/// Hash and Eq are based ONLY on the inner string.
+#[derive(Debug, Clone)]
+pub struct NormalizedString {
+    value: String,
+}
+
+impl NormalizedString {
+    pub fn new(s: &str) -> Self {
+        NormalizedString {
+            value: s.trim().to_lowercase(),
+        }
+    }
+}
+
+// Hash ONLY the inner string
+impl Hash for NormalizedString {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.value.hash(state);
+    }
+}
+
+// Eq ONLY compares inner string
+impl PartialEq for NormalizedString {
+    fn eq(&self, other: &Self) -> bool {
+        self.value == other.value
+    }
+}
+impl Eq for NormalizedString {}
+
+// Now Borrow<str> is CORRECT - Hash/Eq match!
+impl Borrow<str> for NormalizedString {
+    fn borrow(&self) -> &str {
+        &self.value
+    }
+}
+
+// ------------------------------
+// ------------------------------
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -127,6 +202,40 @@ mod tests {
         slice_mut[0] = 99;
 
         assert_eq!(buf.borrow() as &[u8], &[99, 2, 3]);
+    }
+
+    #[test]
+    fn test_asref_vs_borrow_userid() {
+        // UserId uses AsRef<str>, NOT Borrow<str>
+        let id = UserId::new("12345");
+
+        // AsRef works for general string access
+        fn takes_asref<S: AsRef<str>>(s: S) -> usize {
+            s.as_ref().len()
+        }
+        assert_eq!(takes_asref(&id), 5);
+
+        // But we CANNOT use UserId as HashMap key looked up by &str
+        // because it doesn't (and shouldn't) implement Borrow<str>
+        let mut map: HashMap<UserId, i32> = HashMap::new();
+        map.insert(UserId::new("123"), 42);
+
+        // Must look up with UserId, not &str
+        assert_eq!(map.get(&UserId::new("123")), Some(&42));
+        // map.get("123")  // Won't compile! UserId: !Borrow<str>
+    }
+
+    #[test]
+    fn test_borrow_normalized_string() {
+        // NormalizedString correctly implements Borrow<str>
+        let mut map: HashMap<NormalizedString, i32> = HashMap::new();
+
+        map.insert(NormalizedString::new("  Hello  "), 1);
+        map.insert(NormalizedString::new("WORLD"), 2);
+
+        // Can look up with &str because Hash/Eq are consistent!
+        assert_eq!(map.get("hello"), Some(&1)); // Normalized: "hello"
+        assert_eq!(map.get("world"), Some(&2)); // Normalized: "world"
     }
 }
 
