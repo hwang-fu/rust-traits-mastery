@@ -152,6 +152,42 @@ impl Borrow<str> for NormalizedString {
 }
 
 // ------------------------------
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct BorrowedPath {
+    inner: str, // Unsized! Can only exist behind a reference.
+}
+
+impl BorrowedPath {
+    pub fn new(s: &str) -> &Self {
+        unsafe { &*(s as *const str as *const BorrowedPath) }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct OwnedPath {
+    inner: String,
+}
+
+impl OwnedPath {
+    pub fn new(s: &str) -> Self {
+        OwnedPath { inner: s.into() }
+    }
+}
+
+impl Borrow<BorrowedPath> for OwnedPath {
+    fn borrow(&self) -> &BorrowedPath {
+        BorrowedPath::new(&self.inner)
+    }
+}
+
+impl ToOwned for BorrowedPath {
+    type Owned = OwnedPath;
+    fn to_owned(&self) -> Self::Owned {
+        OwnedPath::new(&self.inner)
+    }
+}
+
 // ------------------------------
 
 #[cfg(test)]
@@ -236,6 +272,27 @@ mod tests {
         // Can look up with &str because Hash/Eq are consistent!
         assert_eq!(map.get("hello"), Some(&1)); // Normalized: "hello"
         assert_eq!(map.get("world"), Some(&2)); // Normalized: "world"
+    }
+
+    #[test]
+    fn test_to_owned_custom() {
+        let borrowed: &BorrowedPath = BorrowedPath::new("/home/user");
+
+        let owned = borrowed.to_owned();
+
+        let borrowed_back: &BorrowedPath = owned.borrow();
+        assert_eq!(borrowed, borrowed_back);
+    }
+
+    #[test]
+    fn test_to_owned_stdlib() {
+        let s: &str = "hello";
+        let owned = s.to_owned();
+        assert_eq!(owned, String::from("hello"));
+
+        let slice: &[i32] = &[1, 2, 3];
+        let vec = slice.to_owned();
+        assert_eq!(vec, vec![1, 2, 3]);
     }
 }
 
