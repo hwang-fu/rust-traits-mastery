@@ -1,5 +1,5 @@
 use std::{
-    borrow::{Borrow, BorrowMut},
+    borrow::{Borrow, BorrowMut, Cow},
     collections::HashMap,
     hash::Hash,
 };
@@ -190,10 +190,35 @@ impl ToOwned for BorrowedPath {
 
 // ------------------------------
 
+// Cow<'a, T> is a smart pointer that can hold either:
+// - Borrowed(&'a T) — a reference, no allocation
+// - Owned(T::Owned) — owned data, allocated
+
+/// Process a string, only allocating if modification is needed.
+pub fn ensure_prefix<'a>(s: &'a str, prefix: &str) -> Cow<'a, str> {
+    if s.starts_with(prefix) {
+        Cow::Borrowed(s)
+    } else {
+        Cow::Owned(format!("{}{}", prefix, s))
+    }
+}
+
+/// Normalize whitespace, only allocating if needed.
+pub fn normalize_whitespace<'a>(s: &'a str) -> Cow<'a, str> {
+    if s.contains("  ") {
+        // Has double spaces, must allocate
+        let normalized = s.split_whitespace().collect::<Vec<_>>().join(" ");
+        Cow::Owned(normalized)
+    } else {
+        // Already normalized, no allocation
+        Cow::Borrowed(s)
+    }
+}
+
+// ------------------------------
+
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use super::*;
 
     #[test]
@@ -293,6 +318,39 @@ mod tests {
         let slice: &[i32] = &[1, 2, 3];
         let vec = slice.to_owned();
         assert_eq!(vec, vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn test_cow_borrowed() {
+        let input = "https://example.com";
+        let result = ensure_prefix(input, "https://");
+
+        // No allocation happened!
+        assert!(matches!(result, Cow::Borrowed(_)));
+        assert_eq!(result, "https://example.com");
+    }
+
+    #[test]
+    fn test_cow_owned() {
+        let input = "example.com";
+        let result = ensure_prefix(input, "https://");
+
+        // Had to allocate
+        assert!(matches!(result, Cow::Owned(_)));
+        assert_eq!(result, "https://example.com");
+    }
+
+    #[test]
+    fn test_cow_normalize() {
+        // No double spaces - borrowed
+        let clean = "hello world";
+        assert!(matches!(normalize_whitespace(clean), Cow::Borrowed(_)));
+
+        // Has double spaces - must allocate
+        let messy = "hello   world";
+        let result = normalize_whitespace(messy);
+        assert!(matches!(result, Cow::Owned(_)));
+        assert_eq!(result, "hello world");
     }
 }
 
