@@ -8,6 +8,7 @@
 
 use std::{
     any::{Any, TypeId},
+    collections::HashMap,
     fmt::Debug,
     mem,
 };
@@ -173,6 +174,123 @@ pub fn extract_i32(value: &dyn Any) -> Option<i32> {
 pub fn extract_string(value: &dyn Any) -> Option<String> {
     // downcast_ref returns Option<&T>, we clone to get owned
     value.downcast_ref::<String>().cloned()
+}
+
+// ---------------------------------
+pub struct AnyVec {
+    items: Vec<Box<dyn Any>>,
+}
+
+impl AnyVec {
+    pub fn new() -> Self {
+        AnyVec { items: Vec::new() }
+    }
+
+    /// Push any 'static type into the collection.
+    pub fn push<T>(&mut self, value: T)
+    where
+        T: Any,
+    {
+        self.items.push(Box::new(value));
+    }
+
+    /// Get a reference to item at index, downcast to T.
+    pub fn get<T: Any>(&self, index: usize) -> Option<&T> {
+        self.items.get(index)?.downcast_ref::<T>()
+    }
+
+    /// Get a mutable reference to item at index, downcast to T.
+    pub fn get_mut<T: Any>(&mut self, index: usize) -> Option<&mut T> {
+        self.items.get_mut(index)?.downcast_mut::<T>()
+    }
+
+    /// Number of items in the collection.
+    pub fn len(&self) -> usize {
+        self.items.len()
+    }
+
+    /// Check if empty.
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
+    }
+
+    /// Iterate over all items, attempting to extract type T.
+    /// Returns only items that successfully downcast to T.
+    pub fn iter_as<T: Any>(&self) -> impl Iterator<Item = &T> {
+        self.items
+            .iter()
+            .filter_map(|item| item.downcast_ref::<T>())
+    }
+}
+
+impl Default for AnyVec {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+// ---------------------------------
+pub struct TypeMap {
+    map: HashMap<TypeId, Box<dyn Any>>,
+}
+
+impl TypeMap {
+    pub fn new() -> Self {
+        TypeMap {
+            map: HashMap::new(),
+        }
+    }
+
+    /// Insert a value. Replaces any existing value of the same type.
+    pub fn insert<T: Any>(&mut self, value: T) -> Option<T> {
+        let key = TypeId::of::<T>();
+        self.map
+            .insert(key, Box::new(value))
+            .and_then(|old| old.downcast::<T>().ok())
+            .map(|boxed| *boxed)
+    }
+
+    /// Get a reference to the value of type T.
+    pub fn get<T: Any>(&self) -> Option<&T> {
+        let key = TypeId::of::<T>();
+        self.map.get(&key)?.downcast_ref::<T>()
+    }
+
+    /// Get a mutable reference to the value of type T.
+    pub fn get_mut<T: Any>(&mut self) -> Option<&mut T> {
+        let key = TypeId::of::<T>();
+        self.map.get_mut(&key)?.downcast_mut::<T>()
+    }
+
+    /// Remove and return the value of type T.
+    pub fn remove<T: Any>(&mut self) -> Option<T> {
+        let key = TypeId::of::<T>();
+        self.map
+            .remove(&key)
+            .and_then(|boxed| boxed.downcast::<T>().ok())
+            .map(|boxed| *boxed)
+    }
+
+    /// Check if a value of type T exists.
+    pub fn contains<T: Any>(&self) -> bool {
+        self.map.contains_key(&TypeId::of::<T>())
+    }
+
+    /// Number of types stored.
+    pub fn len(&self) -> usize {
+        self.map.len()
+    }
+
+    /// Check if empty.
+    pub fn is_empty(&self) -> bool {
+        self.map.is_empty()
+    }
+}
+
+impl Default for TypeMap {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 // ---------------------------------
@@ -381,5 +499,141 @@ mod tests {
         // extract_string works on String
         assert_eq!(extract_string(str_any), Some(String::from("hello")));
         assert_eq!(extract_string(int_any), None);
+    }
+
+    #[test]
+    fn test_any_vec_basic() {
+        let mut vec = AnyVec::new();
+
+        // Push different types
+        vec.push(42i32);
+        vec.push(String::from("hello"));
+        vec.push(3.1f64);
+        vec.push(true);
+
+        assert_eq!(vec.len(), 4);
+
+        // Get with correct type succeeds
+        assert_eq!(vec.get::<i32>(0), Some(&42));
+        assert_eq!(vec.get::<String>(1), Some(&String::from("hello")));
+        assert_eq!(vec.get::<f64>(2), Some(&3.1));
+        assert_eq!(vec.get::<bool>(3), Some(&true));
+
+        // Get with wrong type fails
+        assert_eq!(vec.get::<String>(0), None); // index 0 is i32
+        assert_eq!(vec.get::<i32>(1), None); // index 1 is String
+    }
+
+    #[test]
+    fn test_any_vec_mutation() {
+        let mut vec = AnyVec::new();
+        vec.push(10i32);
+        vec.push(String::from("original"));
+
+        // Mutate the i32
+        if let Some(val) = vec.get_mut::<i32>(0) {
+            *val = 99;
+        }
+        assert_eq!(vec.get::<i32>(0), Some(&99));
+
+        // Mutate the String
+        if let Some(s) = vec.get_mut::<String>(1) {
+            s.push_str(" modified");
+        }
+        assert_eq!(
+            vec.get::<String>(1),
+            Some(&String::from("original modified"))
+        );
+    }
+
+    #[test]
+    fn test_any_vec_iter_as() {
+        let mut vec = AnyVec::new();
+        vec.push(1i32);
+        vec.push(String::from("a"));
+        vec.push(2i32);
+        vec.push(String::from("b"));
+        vec.push(3i32);
+
+        // Collect only i32 values
+        let ints: Vec<&i32> = vec.iter_as::<i32>().collect();
+        assert_eq!(ints, vec![&1, &2, &3]);
+
+        // Collect only String values
+        let strings: Vec<&String> = vec.iter_as::<String>().collect();
+        assert_eq!(strings.len(), 2);
+        assert_eq!(strings[0], "a");
+        assert_eq!(strings[1], "b");
+    }
+
+    #[test]
+    fn test_type_map_basic() {
+        let mut map = TypeMap::new();
+
+        // Insert different types
+        map.insert(42i32);
+        map.insert(String::from("hello"));
+        map.insert(3.1f64);
+
+        assert_eq!(map.len(), 3);
+
+        // Get by type
+        assert_eq!(map.get::<i32>(), Some(&42));
+        assert_eq!(map.get::<String>(), Some(&String::from("hello")));
+        assert_eq!(map.get::<f64>(), Some(&3.1));
+
+        // Get non-existent type
+        assert_eq!(map.get::<bool>(), None);
+    }
+
+    #[test]
+    fn test_type_map_replace() {
+        let mut map = TypeMap::new();
+
+        // Insert returns None for new type
+        let old = map.insert(10i32);
+        assert_eq!(old, None);
+
+        // Insert returns previous value for existing type
+        let old = map.insert(20i32);
+        assert_eq!(old, Some(10));
+
+        // Map now contains the new value
+        assert_eq!(map.get::<i32>(), Some(&20));
+        assert_eq!(map.len(), 1); // Still only one i32
+    }
+
+    #[test]
+    fn test_type_map_remove() {
+        let mut map = TypeMap::new();
+        map.insert(42i32);
+        map.insert(String::from("test"));
+
+        assert_eq!(map.len(), 2);
+
+        // Remove returns the value
+        let removed = map.remove::<i32>();
+        assert_eq!(removed, Some(42));
+        assert_eq!(map.len(), 1);
+
+        // Can't get removed type anymore
+        assert_eq!(map.get::<i32>(), None);
+
+        // String still exists
+        assert_eq!(map.get::<String>(), Some(&String::from("test")));
+    }
+
+    #[test]
+    fn test_type_map_mutation() {
+        let mut map = TypeMap::new();
+        map.insert(vec![1, 2, 3]);
+
+        // Mutate in place
+        if let Some(v) = map.get_mut::<Vec<i32>>() {
+            v.push(4);
+            v.push(5);
+        }
+
+        assert_eq!(map.get::<Vec<i32>>(), Some(&vec![1, 2, 3, 4, 5]));
     }
 }
