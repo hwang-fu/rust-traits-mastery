@@ -1,4 +1,4 @@
-use std::ops::{Add, AddAssign, Div, Mul, Neg, Rem, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Rem, Sub, SubAssign};
 
 // --------------------------------------------
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -178,6 +178,20 @@ impl SubAssign<f64> for Vec2 {
     fn sub_assign(&mut self, rhs: f64) {
         self.x -= rhs;
         self.y -= rhs;
+    }
+}
+
+impl MulAssign<f64> for Vec2 {
+    fn mul_assign(&mut self, scalar: f64) {
+        self.x *= scalar;
+        self.y *= scalar;
+    }
+}
+
+impl DivAssign<f64> for Vec2 {
+    fn div_assign(&mut self, scalar: f64) {
+        self.x /= scalar;
+        self.y /= scalar;
     }
 }
 
