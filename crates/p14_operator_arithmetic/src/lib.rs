@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Rem, Sub};
+use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
 // --------------------------------------------
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -105,6 +105,18 @@ impl Rem for Vec2 {
     }
 }
 
+// -Vec2
+impl Neg for Vec2 {
+    type Output = Self;
+
+    fn neg(self) -> Self::Output {
+        Vec2 {
+            x: -self.x,
+            y: -self.y,
+        }
+    }
+}
+
 // --------------------------------------------
 
 #[cfg(test)]
@@ -184,5 +196,14 @@ mod tests {
         let a = Vec2::new(10.0, 17.0);
         let b = Vec2::new(3.0, 5.0);
         assert_eq!(a % b, Vec2::new(1.0, 2.0));
+    }
+
+    #[test]
+    fn test_neg() {
+        let v = Vec2::new(3.0, -4.0);
+        assert_eq!(-v, Vec2::new(-3.0, 4.0));
+
+        // Double negation
+        assert_eq!(-(-v), v);
     }
 }
