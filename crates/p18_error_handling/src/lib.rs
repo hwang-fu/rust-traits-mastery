@@ -1,4 +1,8 @@
-use std::{error::Error, fmt::Display};
+use core::fmt;
+use std::{
+    error::Error,
+    fmt::{Display, Formatter},
+};
 
 // -----------------------------------------------
 #[derive(Debug)]
@@ -23,7 +27,7 @@ pub enum ConfigError {
 }
 
 impl Display for ConfigError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             ConfigError::MissingField { field } => {
                 write!(f, "missing required field: '{}'", field)
@@ -73,7 +77,7 @@ impl ValidationError {
 }
 
 impl Display for ValidationError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "validation failed for '{}': {}",
@@ -83,6 +87,40 @@ impl Display for ValidationError {
 }
 
 impl Error for ValidationError {}
+
+// -----------------------------------------------
+#[derive(Debug)]
+pub enum AppError {
+    /// Configuration error
+    Config(ConfigError),
+    /// IO error (wraps std::io::Error)
+    Io(std::io::Error),
+    /// Parse error with context
+    Parse {
+        context: String,
+        source: std::num::ParseIntError,
+    },
+}
+
+impl Display for AppError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::Config(e) => write!(f, "configuration error: {}", e),
+            AppError::Io(e) => write!(f, "IO error: {}", e),
+            AppError::Parse { context, .. } => write!(f, "parse error: {}", context),
+        }
+    }
+}
+
+impl Error for AppError {
+    fn source(&self) -> Option<&(dyn Error + 'static)> {
+        match self {
+            AppError::Config(e) => Some(e),
+            AppError::Io(e) => Some(e),
+            AppError::Parse { source, .. } => Some(source),
+        }
+    }
+}
 
 // -----------------------------------------------
 #[cfg(test)]
