@@ -1,4 +1,7 @@
-use std::{ops::Index, usize};
+use std::{
+    ops::{Index, IndexMut},
+    usize,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Grid2D<T> {
@@ -51,6 +54,17 @@ where
         let (r, c) = index;
         let idx = self.linear_index(r, c);
         &self.data[idx]
+    }
+}
+
+impl<T> IndexMut<(usize, usize)> for Grid2D<T>
+where
+    T: Clone,
+{
+    fn index_mut(&mut self, index: (usize, usize)) -> &mut Self::Output {
+        let (r, c) = index;
+        let idx = self.linear_index(r, c);
+        &mut self.data[idx]
     }
 }
 
