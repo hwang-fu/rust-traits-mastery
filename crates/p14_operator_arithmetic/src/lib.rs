@@ -11,6 +11,27 @@ impl Vec2 {
     pub fn new(x: f64, y: f64) -> Self {
         Vec2 { x, y }
     }
+
+    /// Zero vector
+    pub fn zero() -> Self {
+        Vec2 { x: 0.0, y: 0.0 }
+    }
+
+    /// Dot product (uses our Mul internally, but returns scalar)
+    pub fn dot(self, other: Self) -> f64 {
+        self.x * other.x + self.y * other.y
+    }
+
+    /// Length (magnitude) of the vector
+    pub fn length(self) -> f64 {
+        self.dot(self).sqrt()
+    }
+
+    /// Normalize to unit length
+    pub fn normalize(self) -> Self {
+        let len = self.length();
+        if len == 0.0 { self } else { self / len }
+    }
 }
 
 // Vec2 + Vec2
@@ -300,5 +321,43 @@ mod tests {
     fn test_scalar_div() {
         let v = Vec2::new(10.0, 20.0);
         assert_eq!(v / 2.0, Vec2::new(5.0, 10.0));
+    }
+
+    #[test]
+    fn test_assign_ops() {
+        let mut v = Vec2::new(1.0, 2.0);
+
+        v += Vec2::new(3.0, 4.0);
+        assert_eq!(v, Vec2::new(4.0, 6.0));
+
+        v -= Vec2::new(1.0, 1.0);
+        assert_eq!(v, Vec2::new(3.0, 5.0));
+
+        v *= 2.0;
+        assert_eq!(v, Vec2::new(6.0, 10.0));
+
+        v /= 2.0;
+        assert_eq!(v, Vec2::new(3.0, 5.0));
+    }
+
+    #[test]
+    fn test_vector_math() {
+        let v = Vec2::new(3.0, 4.0);
+
+        // Length of (3, 4) = 5 (Pythagorean triple)
+        assert_eq!(v.length(), 5.0);
+
+        // Normalized vector has length 1
+        let unit = v.normalize();
+        assert!((unit.length() - 1.0).abs() < 1e-10);
+
+        // Dot product
+        let a = Vec2::new(1.0, 0.0);
+        let b = Vec2::new(0.0, 1.0);
+        assert_eq!(a.dot(b), 0.0); // Perpendicular vectors
+
+        // Combining operations
+        let result = (a + b) * 2.0 - Vec2::new(1.0, 1.0);
+        assert_eq!(result, Vec2::new(1.0, 1.0));
     }
 }
