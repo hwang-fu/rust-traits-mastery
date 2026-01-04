@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr, BitXor, Not, Shl};
+use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
 
 // -----------------------------------
 
@@ -105,6 +105,24 @@ impl Shl<u32> for Bits {
 
     fn shl(self, rhs: u32) -> Self::Output {
         Bits(self.0 << rhs)
+    }
+}
+
+// -----------------------------------
+// Shr: Right shift (bits >> n)
+impl Shr<u8> for Bits {
+    type Output = Self;
+
+    fn shr(self, rhs: u8) -> Self::Output {
+        Bits(self.0 >> rhs)
+    }
+}
+
+impl Shr<u32> for Bits {
+    type Output = Self;
+
+    fn shr(self, rhs: u32) -> Self::Output {
+        Bits(self.0 >> rhs)
     }
 }
 
