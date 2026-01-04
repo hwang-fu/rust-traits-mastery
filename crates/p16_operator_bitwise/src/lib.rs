@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr, BitXor, Not, Shl, Shr};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, BitXorAssign, Not, Shl, Shr};
 
 // -----------------------------------
 
@@ -75,6 +75,24 @@ impl Not for Permissions {
     }
 }
 
+impl BitOrAssign for Permissions {
+    fn bitor_assign(&mut self, rhs: Self) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitAndAssign for Permissions {
+    fn bitand_assign(&mut self, rhs: Self) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl BitXorAssign for Permissions {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        self.0 ^= rhs.0;
+    }
+}
+
 // -----------------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -99,29 +117,11 @@ impl Shl<u8> for Bits {
     }
 }
 
-// Also support shifting by u32 (common in Rust)
-impl Shl<u32> for Bits {
-    type Output = Self;
-
-    fn shl(self, rhs: u32) -> Self::Output {
-        Bits(self.0 << rhs)
-    }
-}
-
-// -----------------------------------
 // Shr: Right shift (bits >> n)
 impl Shr<u8> for Bits {
     type Output = Self;
 
     fn shr(self, rhs: u8) -> Self::Output {
-        Bits(self.0 >> rhs)
-    }
-}
-
-impl Shr<u32> for Bits {
-    type Output = Self;
-
-    fn shr(self, rhs: u32) -> Self::Output {
         Bits(self.0 >> rhs)
     }
 }
@@ -173,6 +173,56 @@ mod tests {
         assert!(!inverted.contains(Permissions::READ));
         assert!(inverted.contains(Permissions::WRITE));
         assert!(inverted.contains(Permissions::EXECUTE));
+    }
+
+    #[test]
+    fn test_shift_left() {
+        let bits = Bits::new(0b0001);
+
+        assert_eq!((bits << 1).value(), 0b0010);
+        assert_eq!((bits << 2).value(), 0b0100);
+        assert_eq!((bits << 3).value(), 0b1000);
+    }
+
+    #[test]
+    fn test_shift_right() {
+        let bits = Bits::new(0b1000);
+
+        assert_eq!((bits >> 1).value(), 0b0100);
+        assert_eq!((bits >> 2).value(), 0b0010);
+        assert_eq!((bits >> 3).value(), 0b0001);
+    }
+
+    #[test]
+    fn test_shift_create_flags() {
+        // Common pattern: create flags by shifting
+        let flag_0 = Bits::new(1) << 0; // 0b0001
+        let flag_1 = Bits::new(1) << 1; // 0b0010
+        let flag_2 = Bits::new(1) << 2; // 0b0100
+
+        assert_eq!(flag_0.value(), 1);
+        assert_eq!(flag_1.value(), 2);
+        assert_eq!(flag_2.value(), 4);
+    }
+
+    #[test]
+    fn test_assign_ops() {
+        let mut perms = Permissions::READ;
+
+        // Add WRITE
+        perms |= Permissions::WRITE;
+        assert!(perms.contains(Permissions::READ));
+        assert!(perms.contains(Permissions::WRITE));
+
+        // Remove READ using XOR
+        perms ^= Permissions::READ;
+        assert!(!perms.contains(Permissions::READ));
+        assert!(perms.contains(Permissions::WRITE));
+
+        // Mask to keep only WRITE
+        perms |= Permissions::EXECUTE;
+        perms &= Permissions::WRITE;
+        assert_eq!(perms, Permissions::WRITE);
     }
 }
 
