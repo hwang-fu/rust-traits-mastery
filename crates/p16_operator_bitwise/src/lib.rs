@@ -1,3 +1,6 @@
+use std::ops::BitOr;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Permissions(u8);
 
 impl Permissions {
@@ -15,5 +18,12 @@ impl Permissions {
     /// Check if empty (no permissions)
     pub fn is_empty(self) -> bool {
         self.0 == 0
+    }
+}
+
+impl BitOr for Permissions {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Permissions(self.0 | rhs.0)
     }
 }
