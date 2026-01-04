@@ -1,4 +1,4 @@
-use std::ops::{BitAnd, BitOr, BitXor};
+use std::ops::{BitAnd, BitOr, BitXor, Not};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Permissions(u8);
@@ -55,10 +55,20 @@ impl BitAnd<u8> for Permissions {
     }
 }
 
+// BitXor: Toggle permissions (perms ^ WRITE)
 impl BitXor for Permissions {
     type Output = Self;
 
     fn bitxor(self, rhs: Self) -> Self::Output {
         Permissions(self.0 ^ rhs.0)
+    }
+}
+
+impl Not for Permissions {
+    type Output = Self;
+
+    fn not(self) -> Self::Output {
+        // Only invert the bits we care about (lower 3 bits)
+        Permissions(!self.0 & 0b0111)
     }
 }
