@@ -1,4 +1,4 @@
-use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
+use std::ops::{Add, AddAssign, Div, Mul, Neg, Rem, Sub};
 
 // --------------------------------------------
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -150,6 +150,20 @@ impl Div<f64> for Vec2 {
             x: self.x / scalar,
             y: self.y / scalar,
         }
+    }
+}
+
+impl AddAssign for Vec2 {
+    fn add_assign(&mut self, rhs: Self) {
+        self.x += rhs.x;
+        self.y += rhs.y;
+    }
+}
+
+impl AddAssign<f64> for Vec2 {
+    fn add_assign(&mut self, rhs: f64) {
+        self.x += rhs;
+        self.y += rhs;
     }
 }
 
