@@ -1,4 +1,4 @@
-use std::ops::BitOr;
+use std::ops::{BitAnd, BitOr, BitXor};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Permissions(u8);
@@ -21,9 +21,44 @@ impl Permissions {
     }
 }
 
+// BitOr: Combine permissions (READ | WRITE)
 impl BitOr for Permissions {
     type Output = Self;
+
     fn bitor(self, rhs: Self) -> Self::Output {
         Permissions(self.0 | rhs.0)
+    }
+}
+
+impl BitOr<u8> for Permissions {
+    type Output = Self;
+
+    fn bitor(self, rhs: u8) -> Self::Output {
+        Permissions(self.0 | rhs)
+    }
+}
+
+// BitAnd: Check/mask permissions (perms & READ)
+impl BitAnd for Permissions {
+    type Output = Self;
+
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Permissions(self.0 & rhs.0)
+    }
+}
+
+impl BitAnd<u8> for Permissions {
+    type Output = Self;
+
+    fn bitand(self, rhs: u8) -> Self::Output {
+        Permissions(self.0 & rhs)
+    }
+}
+
+impl BitXor for Permissions {
+    type Output = Self;
+
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Permissions(self.0 ^ rhs.0)
     }
 }
