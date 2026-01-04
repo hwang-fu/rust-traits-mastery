@@ -6,7 +6,11 @@
 //! 3. DSTs (str, [T], dyn Trait) can only be used behind pointers
 //! 4. Fat pointers = data ptr + metadata (length or vtable)
 
-use std::{fmt::Debug, mem};
+use std::{
+    any::{Any, TypeId},
+    fmt::Debug,
+    mem,
+};
 
 // ---------------------------------
 pub fn print_size_of<T>() {
@@ -125,6 +129,50 @@ where
         "Wrapper {{ prefix: {:?}, data: {:?} }}",
         wrapper.prefix, &wrapper.data
     );
+}
+
+// ---------------------------------
+/// Demonstrates that every type has a unique TypeId.
+pub fn demonstrate_type_ids() {
+    println!("=== TypeId Examples ===");
+    println!("TypeId of i32:    {:?}", TypeId::of::<i32>());
+    println!("TypeId of i64:    {:?}", TypeId::of::<i64>());
+    println!("TypeId of String: {:?}", TypeId::of::<String>());
+    println!("TypeId of &str:   {:?}", TypeId::of::<&str>());
+
+    // Same type = same TypeId
+    let id1 = TypeId::of::<String>();
+    let id2 = TypeId::of::<String>();
+    println!("\nSame type, same id: {}", id1 == id2);
+
+    // Different types = different TypeId
+    let id3 = TypeId::of::<i32>();
+    println!("Different types, different id: {}", id1 != id3);
+}
+
+/// Check the type of a value at runtime using Any.
+pub fn check_type(value: &dyn Any) {
+    if value.is::<i32>() {
+        println!("It's an i32!");
+    } else if value.is::<String>() {
+        println!("It's a String!");
+    } else if value.is::<f64>() {
+        println!("It's an f64!");
+    } else {
+        println!("Unknown type with id: {:?}", value.type_id());
+    }
+}
+
+/// Downcast a dyn Any reference to a concrete type.
+/// Returns the value if successful, or a message if not.
+pub fn extract_i32(value: &dyn Any) -> Option<i32> {
+    // downcast_ref returns Option<&T>
+    value.downcast_ref::<i32>().copied()
+}
+
+pub fn extract_string(value: &dyn Any) -> Option<String> {
+    // downcast_ref returns Option<&T>, we clone to get owned
+    value.downcast_ref::<String>().cloned()
 }
 
 // ---------------------------------
@@ -261,5 +309,77 @@ mod tests {
 
         let int_slice: &[i32] = &[1, 2, 3];
         assert_eq!(describe(int_slice), "[1, 2, 3]");
+    }
+
+    #[test]
+    fn test_type_ids() {
+        demonstrate_type_ids();
+
+        // TypeId is consistent for the same type
+        assert_eq!(TypeId::of::<i32>(), TypeId::of::<i32>());
+        assert_eq!(TypeId::of::<String>(), TypeId::of::<String>());
+
+        // TypeId differs between types
+        assert_ne!(TypeId::of::<i32>(), TypeId::of::<i64>());
+        assert_ne!(TypeId::of::<String>(), TypeId::of::<&str>());
+    }
+
+    #[test]
+    fn test_is_type_check() {
+        let int_val: Box<dyn Any> = Box::new(42i32);
+        let str_val: Box<dyn Any> = Box::new(String::from("hello"));
+        let float_val: Box<dyn Any> = Box::new(3.1f64);
+
+        // is::<T>() returns true only for matching type
+        assert!(int_val.is::<i32>());
+        assert!(!int_val.is::<i64>()); // i32 != i64
+        assert!(!int_val.is::<String>());
+
+        assert!(str_val.is::<String>());
+        assert!(!str_val.is::<&str>()); // String != &str
+
+        assert!(float_val.is::<f64>());
+        assert!(!float_val.is::<f32>()); // f64 != f32
+    }
+
+    #[test]
+    fn test_check_type_function() {
+        let a: &dyn Any = &42i32;
+        let b: &dyn Any = &String::from("test");
+        let c: &dyn Any = &3.1f64;
+        let d: &dyn Any = &vec![1, 2, 3]; // Unknown type
+
+        check_type(a); // "It's an i32!"
+        check_type(b); // "It's a String!"
+        check_type(c); // "It's an f64!"
+        check_type(d); // "Unknown type..."
+    }
+
+    #[test]
+    fn test_downcast_ref() {
+        let val: Box<dyn Any> = Box::new(42i32);
+
+        // Successful downcast
+        let result = val.downcast_ref::<i32>();
+        assert!(result.is_some());
+        assert_eq!(*result.unwrap(), 42);
+
+        // Failed downcast (wrong type)
+        let result = val.downcast_ref::<String>();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_extract_functions() {
+        let int_any: &dyn Any = &100i32;
+        let str_any: &dyn Any = &String::from("hello");
+
+        // extract_i32 works on i32
+        assert_eq!(extract_i32(int_any), Some(100));
+        assert_eq!(extract_i32(str_any), None);
+
+        // extract_string works on String
+        assert_eq!(extract_string(str_any), Some(String::from("hello")));
+        assert_eq!(extract_string(int_any), None);
     }
 }
