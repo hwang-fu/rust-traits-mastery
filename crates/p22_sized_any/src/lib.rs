@@ -636,4 +636,44 @@ mod tests {
 
         assert_eq!(map.get::<Vec<i32>>(), Some(&vec![1, 2, 3, 4, 5]));
     }
+
+    #[test]
+    fn test_box_downcast() {
+        // Box<dyn Any> can be downcast to Box<T>
+        let boxed: Box<dyn Any> = Box::new(String::from("owned"));
+
+        // downcast() consumes the Box and returns Result<Box<T>, Box<dyn Any>>
+        let result = boxed.downcast::<String>();
+        assert!(result.is_ok());
+
+        let unboxed: Box<String> = result.unwrap();
+        assert_eq!(*unboxed, "owned");
+
+        // Failed downcast returns the original Box
+        let boxed: Box<dyn Any> = Box::new(42i32);
+        let result = boxed.downcast::<String>();
+        assert!(result.is_err());
+
+        // Get the Box back from the error
+        let recovered: Box<dyn Any> = result.unwrap_err();
+        assert!(recovered.is::<i32>());
+    }
+
+    #[test]
+    fn test_any_static_requirement() {
+        // Any requires 'static — no borrowed references
+
+        // This works: owned data is 'static
+        let owned = String::from("hello");
+        let any_ref: &dyn Any = &owned;
+        assert!(any_ref.is::<String>());
+
+        // &'static str is also fine
+        let static_str: &'static str = "world";
+        let any_ref: &dyn Any = &static_str;
+        assert!(any_ref.is::<&str>());
+
+        // Note: &str with non-static lifetime cannot be used as dyn Any
+        // This constraint ensures TypeId remains valid for the program's lifetime
+    }
 }
