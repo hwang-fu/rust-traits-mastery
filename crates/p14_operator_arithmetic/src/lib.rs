@@ -117,6 +117,42 @@ impl Neg for Vec2 {
     }
 }
 
+// Scalar multiplication: Vec2 * f64
+impl Mul<f64> for Vec2 {
+    type Output = Vec2;
+
+    fn mul(self, scalar: f64) -> Self::Output {
+        Vec2 {
+            x: self.x * scalar,
+            y: self.y * scalar,
+        }
+    }
+}
+
+// Scalar multiplication: f64 * Vec2 (for commutativity)
+impl Mul<Vec2> for f64 {
+    type Output = Vec2;
+
+    fn mul(self, vec: Vec2) -> Self::Output {
+        Vec2 {
+            x: self * vec.x,
+            y: self * vec.y,
+        }
+    }
+}
+
+// Scalar division: Vec2 / f64
+impl Div<f64> for Vec2 {
+    type Output = Vec2;
+
+    fn div(self, scalar: f64) -> Self::Output {
+        Vec2 {
+            x: self.x / scalar,
+            y: self.y / scalar,
+        }
+    }
+}
+
 // --------------------------------------------
 
 #[cfg(test)]
@@ -205,5 +241,22 @@ mod tests {
 
         // Double negation
         assert_eq!(-(-v), v);
+    }
+
+    #[test]
+    fn test_scalar_mul() {
+        let v = Vec2::new(2.0, 3.0);
+
+        // Vec2 * f64
+        assert_eq!(v * 2.0, Vec2::new(4.0, 6.0));
+
+        // f64 * Vec2 (commutative)
+        assert_eq!(2.0 * v, Vec2::new(4.0, 6.0));
+    }
+
+    #[test]
+    fn test_scalar_div() {
+        let v = Vec2::new(10.0, 20.0);
+        assert_eq!(v / 2.0, Vec2::new(5.0, 10.0));
     }
 }
