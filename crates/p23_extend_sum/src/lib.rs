@@ -1,3 +1,8 @@
+use std::{
+    iter::Sum,
+    ops::{Add, Mul},
+};
+
 // -----------------------------
 #[derive(Debug, Clone, PartialEq)]
 pub struct Bag<T> {
@@ -45,6 +50,78 @@ impl<T> FromIterator<T> for Bag<T> {
         let mut bag = Bag::new();
         bag.extend(iter); // Reuse Extend implementation
         bag
+    }
+}
+
+// -----------------------------
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Money {
+    cents: i64,
+}
+
+impl Money {
+    pub fn new(cents: i64) -> Self {
+        Money { cents }
+    }
+
+    pub fn from_dollars(dollars: i64) -> Self {
+        Money {
+            cents: dollars * 100,
+        }
+    }
+
+    pub fn cents(&self) -> i64 {
+        self.cents
+    }
+
+    pub fn dollars(&self) -> f64 {
+        self.cents as f64 / 100.0
+    }
+
+    /// The additive identity (zero)
+    pub fn zero() -> Self {
+        Money { cents: 0 }
+    }
+
+    /// The multiplicative identity (one dollar = 100 cents for scaling)
+    pub fn one() -> Self {
+        Money { cents: 100 }
+    }
+}
+
+// Add support for Money + Money
+impl Add for Money {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Money {
+            cents: self.cents + rhs.cents,
+        }
+    }
+}
+
+// Mul support for Money * i64 (scaling)
+impl Mul<i64> for Money {
+    type Output = Self;
+
+    fn mul(self, rhs: i64) -> Self::Output {
+        Money {
+            cents: self.cents * rhs,
+        }
+    }
+}
+
+// Sum: enable .sum() on Iterator<Item = Money>
+impl Sum for Money {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Money::zero(), |acc, x| acc + x)
+    }
+}
+
+// Sum for references: enable .sum() on Iterator<Item = &Money>
+impl<'a> Sum<&'a Money> for Money {
+    fn sum<I: Iterator<Item = &'a Money>>(iter: I) -> Self {
+        iter.fold(Money::zero(), |acc, x| acc + *x)
     }
 }
 
@@ -99,5 +176,62 @@ mod tests {
         // Extending with items works
         bag.extend([1, 2]);
         assert_eq!(bag.len(), 2);
+    }
+
+    #[test]
+    fn test_money_basic() {
+        let m = Money::from_dollars(10);
+        assert_eq!(m.cents(), 1000);
+        assert_eq!(m.dollars(), 10.0);
+
+        let m2 = Money::new(550);
+        assert_eq!(m2.dollars(), 5.5);
+    }
+
+    #[test]
+    fn test_money_add() {
+        let a = Money::from_dollars(10);
+        let b = Money::from_dollars(5);
+        let c = a + b;
+
+        assert_eq!(c.cents(), 1500);
+    }
+
+    #[test]
+    fn test_money_sum_owned() {
+        let amounts = vec![
+            Money::from_dollars(10),
+            Money::from_dollars(20),
+            Money::from_dollars(15),
+        ];
+
+        // .sum() works because we implemented Sum for Money
+        let total: Money = amounts.into_iter().sum();
+        assert_eq!(total.cents(), 4500); // $45.00
+    }
+
+    #[test]
+    fn test_money_sum_references() {
+        let amounts = [
+            Money::from_dollars(5),
+            Money::from_dollars(10),
+            Money::from_dollars(3),
+        ];
+
+        // .sum() on references works because we implemented Sum<&Money>
+        let total: Money = amounts.iter().sum();
+        assert_eq!(total.cents(), 1800); // $18.00
+
+        // Original vec is still usable
+        assert_eq!(amounts.len(), 3);
+    }
+
+    #[test]
+    fn test_money_sum_empty() {
+        let empty: Vec<Money> = vec![];
+
+        // Sum of empty iterator returns the identity (zero)
+        let total: Money = empty.into_iter().sum();
+        assert_eq!(total.cents(), 0);
     }
 }
