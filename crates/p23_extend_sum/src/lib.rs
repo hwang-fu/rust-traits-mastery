@@ -1,5 +1,5 @@
 use std::{
-    iter::Sum,
+    iter::{Product, Sum},
     ops::{Add, Mul},
 };
 
@@ -50,6 +50,73 @@ impl<T> FromIterator<T> for Bag<T> {
         let mut bag = Bag::new();
         bag.extend(iter); // Reuse Extend implementation
         bag
+    }
+}
+
+// -----------------------------
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
+pub struct Scalar(pub f64);
+
+impl Scalar {
+    pub fn new(value: f64) -> Self {
+        Scalar(value)
+    }
+
+    pub fn value(&self) -> f64 {
+        self.0
+    }
+
+    /// Additive identity
+    pub fn zero() -> Self {
+        Scalar(0.0)
+    }
+
+    /// Multiplicative identity
+    pub fn one() -> Self {
+        Scalar(1.0)
+    }
+}
+
+impl Add for Scalar {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Scalar(self.0 + rhs.0)
+    }
+}
+
+impl Mul for Scalar {
+    type Output = Self;
+
+    fn mul(self, rhs: Self) -> Self::Output {
+        Scalar(self.0 * rhs.0)
+    }
+}
+
+// Sum for Scalar
+impl Sum for Scalar {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Scalar::zero(), |acc, x| acc + x)
+    }
+}
+
+impl<'a> Sum<&'a Scalar> for Scalar {
+    fn sum<I: Iterator<Item = &'a Scalar>>(iter: I) -> Self {
+        iter.fold(Scalar::zero(), |acc, x| acc + *x)
+    }
+}
+
+// Product for Scalar
+impl Product for Scalar {
+    fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
+        // Start with ONE (multiplicative identity) and multiply all items
+        iter.fold(Scalar::one(), |acc, x| acc * x)
+    }
+}
+
+impl<'a> Product<&'a Scalar> for Scalar {
+    fn product<I: Iterator<Item = &'a Scalar>>(iter: I) -> Self {
+        iter.fold(Scalar::one(), |acc, x| acc * *x)
     }
 }
 
