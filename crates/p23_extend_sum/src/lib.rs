@@ -301,4 +301,89 @@ mod tests {
         let total: Money = empty.into_iter().sum();
         assert_eq!(total.cents(), 0);
     }
+
+    #[test]
+    fn test_scalar_sum() {
+        let values = [Scalar(1.0), Scalar(2.0), Scalar(3.0), Scalar(4.0)];
+
+        let total: Scalar = values.iter().sum();
+        assert_eq!(total.value(), 10.0);
+    }
+
+    #[test]
+    fn test_scalar_product() {
+        let values = vec![Scalar(2.0), Scalar(3.0), Scalar(4.0)];
+
+        // .product() works because we implemented Product
+        let result: Scalar = values.into_iter().product();
+        assert_eq!(result.value(), 24.0); // 2 * 3 * 4
+    }
+
+    #[test]
+    fn test_scalar_product_references() {
+        let values = [Scalar(1.5), Scalar(2.0), Scalar(4.0)];
+
+        let result: Scalar = values.iter().product();
+        assert_eq!(result.value(), 12.0); // 1.5 * 2 * 4
+
+        // Original still available
+        assert_eq!(values.len(), 3);
+    }
+
+    #[test]
+    fn test_scalar_product_empty() {
+        let empty: Vec<Scalar> = vec![];
+
+        // Product of empty iterator returns the identity (one)
+        let result: Scalar = empty.into_iter().product();
+        assert_eq!(result.value(), 1.0);
+    }
+
+    #[test]
+    fn test_scalar_sum_and_product_chained() {
+        // Demonstrate using both in a realistic scenario
+        let rows = [
+            vec![Scalar(1.0), Scalar(2.0)], // row product = 2
+            vec![Scalar(3.0), Scalar(4.0)], // row product = 12
+            vec![Scalar(2.0), Scalar(5.0)], // row product = 10
+        ];
+
+        // Product of each row, then sum all row products
+        let total: Scalar = rows.iter().map(|row| row.iter().product::<Scalar>()).sum();
+
+        assert_eq!(total.value(), 24.0); // 2 + 12 + 10
+    }
+
+    #[test]
+    fn test_extend_with_sum() {
+        // Combine Extend and Sum in a realistic scenario
+        let mut totals: Bag<Money> = Bag::new();
+
+        // First batch of transactions
+        totals.extend(vec![Money::from_dollars(100), Money::from_dollars(50)]);
+
+        // Second batch
+        totals.extend(vec![Money::from_dollars(75), Money::from_dollars(25)]);
+
+        // Sum all money in the bag
+        let grand_total: Money = totals.iter().sum();
+        assert_eq!(grand_total.cents(), 25000); // $250.00
+
+        assert_eq!(totals.len(), 4);
+    }
+
+    #[test]
+    fn test_all_traits_together() {
+        // Create a bag of scalars using collect (FromIterator)
+        let bag: Bag<Scalar> = (1..=5).map(|n| Scalar(n as f64)).collect();
+        assert_eq!(bag.len(), 5);
+
+        // Sum all values
+        let sum: Scalar = bag.iter().sum();
+        assert_eq!(sum.value(), 15.0); // 1+2+3+4+5
+
+        // Product all values
+        let product: Scalar = bag.iter().product();
+        assert_eq!(product.value(), 120.0); // 1*2*3*4*5 = 5!
+    }
 }
